@@ -2765,6 +2765,37 @@
   }
 
   // [3] 백업: 현재 상품 데이터를 JSON 파일로 다운로드
+  // 🗑️ 상품 전체 삭제 (관리자 전용)
+  function deleteAllProducts() {
+    const total = Object.values(brandProducts).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+    if (total === 0) { alert('삭제할 상품이 없습니다.'); return; }
+    if (!confirm(`⚠️ 등록된 상품 ${total}개를 모두 삭제합니다.\n\n삭제하면 되돌릴 수 없어요. 계속할까요?`)) return;
+    if (confirm('삭제하기 전에 백업 파일(JSON)을 먼저 받아둘까요?\n(권장: 확인 → 백업 다운로드 후 삭제 진행)')) {
+      try { backupProducts(); } catch (e) { console.warn('백업 실패:', e); }
+    }
+    const typed = prompt('정말 삭제하려면 아래 칸에 "전체삭제" 라고 입력하세요.');
+    if (typed === null) return;
+    if (typed.replace(/\s/g, '') !== '전체삭제') { alert('입력이 일치하지 않아 삭제를 취소했습니다.'); return; }
+
+    Object.keys(brandProducts).forEach(b => { brandProducts[b] = []; });
+    saveProductsToStorage();
+    try { if (typeof cartItems !== 'undefined' && Array.isArray(cartItems)) { cartItems.length = 0; localStorage.setItem(CART_STORAGE_KEY, '[]'); } } catch (_) {}
+    if (typeof renderAdminTable === 'function') renderAdminTable();
+    if (typeof renderNewArrivals === 'function') renderNewArrivals();
+    if (typeof renderHeroVisuals === 'function') renderHeroVisuals();
+    if (typeof renderPopularProducts === 'function') renderPopularProducts();
+    showToast(`🗑️ 상품 ${total}개를 모두 삭제했습니다`);
+    setTimeout(() => {
+      alert(
+        `✅ 이 브라우저에서 상품 ${total}개를 삭제했어요.\n\n` +
+        `⚠️ 사이트 방문자에게도 반영하려면:\n` +
+        `1. [🚀 products.json (배포용)] 버튼으로 파일을 받고\n` +
+        `2. GitHub의 products.json을 그 파일로 교체하세요.\n\n` +
+        `(교체하지 않으면 새로고침 때 GitHub의 products.json 상품이 다시 불러와집니다)`
+      );
+    }, 200);
+  }
+
   function backupProducts() {
     try {
       const data = JSON.stringify(brandProducts, null, 2);
@@ -6449,6 +6480,9 @@
         📂 백업 복원
         <input type="file" accept=".json,application/json" onchange="restoreProducts(event)" style="display:none;" />
       </label>
+
+      <!-- 🗑️ 상품 전체 삭제 -->
+      <button onclick="deleteAllProducts()" title="등록된 모든 상품을 삭제합니다. (되돌릴 수 없어요)" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.65rem 1.1rem;background:#b91c1c;color:white;border:none;cursor:pointer;font-family:var(--font-body);font-size:0.75rem;letter-spacing:0.07em;border-radius:2px;font-weight:500;" onmouseover="this.style.background='#991b1b'" onmouseout="this.style.background='#b91c1c'">🗑️ 상품 전체 삭제</button>
 
       <div style="width:1px;height:24px;background:rgba(0,0,0,0.12);margin:0 0.2rem;"></div>
 
